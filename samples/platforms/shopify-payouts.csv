@@ -1,0 +1,6 @@
+order_id,payout_date,currency,gross_amount,processing_fee,shipping_label_fee,ad_spend,refund_amount,chargeback_adjustment,net_amount
+SHOP-2001,2026-07-11,USD,80.00,2.60,5.00,3.00,0,0,69.40
+SHOP-2002,2026-07-13,USD,140.00,4.36,8.00,6.00,0,0,121.64
+SHOP-2003,2026-07-15,EUR,100.00,3.20,4.00,2.00,0,0,90.80
+SHOP-2004,2026-07-17,USD,160.00,5.00,9.00,5.00,0,0,141.00
+SHOP-2005,2026-07-19,USD,60.00,2.04,3.00,1.50,0,0,53.46

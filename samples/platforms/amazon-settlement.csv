@@ -1,0 +1,6 @@
+order_id,settled_at,currency,gross_sales,commission_fee,fba_fee,storage_fee,advertising_fee,refund_amount,other_adjustment,net_proceeds
+AMZ-1001,2026-07-10,USD,120.00,18.00,6.50,1.20,4.00,0,0,90.30
+AMZ-1002,2026-07-12,USD,200.00,30.00,9.00,1.50,6.00,0,0,153.50
+AMZ-1003,2026-07-14,USD,75.00,11.25,4.00,0.80,2.00,0,0,56.95
+AMZ-1004,2026-07-16,USD,150.00,22.50,7.00,1.00,3.50,5.00,0,111.00
+AMZ-1005,2026-07-25,USD,95.00,14.25,5.00,0.90,2.50,0,0,72.35

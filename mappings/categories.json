@@ -1,0 +1,27 @@
+{
+  "_note": "科目翻译层：把各平台结算报表里的原始费用列名，翻译成统一的七个科目——佣金/广告/物流/仓储/退款/调整/其他。新增平台时在对应小节补充列名映射；未列出的列名会归入 _default。这是一份纯数据文件，店主或 agent 可以直接改这里而不用碰代码。",
+  "amazon": {
+    "commission_fee": "佣金",
+    "fba_fee": "物流",
+    "storage_fee": "仓储",
+    "advertising_fee": "广告",
+    "refund_amount": "退款",
+    "other_adjustment": "调整"
+  },
+  "shopify": {
+    "processing_fee": "佣金",
+    "shipping_label_fee": "物流",
+    "ad_spend": "广告",
+    "refund_amount": "退款",
+    "chargeback_adjustment": "调整"
+  },
+  "tiktok": {
+    "commission_fee": "佣金",
+    "logistics_fee": "物流",
+    "warehousing_fee": "仓储",
+    "affiliate_fee": "广告",
+    "refund_amount": "退款",
+    "adjustment_amount": "调整"
+  },
+  "_default": "其他"
+}

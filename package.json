@@ -1,0 +1,15 @@
+{
+  "name": "recon-pipeline-template",
+  "version": "0.1.0",
+  "private": true,
+  "description": "多平台自动对账流水线模板：读取 Amazon/Shopify/TikTok Shop 等结算报表，翻译科目并与银行流水匹配，输出差异报告。零依赖 Node.js。",
+  "main": "reconcile.js",
+  "scripts": {
+    "reconcile": "node reconcile.js --input samples/platforms --bank samples/bank.csv --out report.csv"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "license": "MIT"
+}

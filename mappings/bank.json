@@ -1,0 +1,14 @@
+{
+  "_note": "银行流水列名映射：如果你的银行导出 CSV 表头不是统一字段名 date/amount/currency/reference，就把原始表头写在这里，映射到这四个统一字段名之一。samples/bank.csv 用的已经是统一表头，所以下面这些示例条目在跑示例数据时不会生效——它们只是给接入真实银行流水时参考的例子，按你实际拿到的表头改就行，用不到的行可以删掉。",
+  "交易日期": "date",
+  "记账日期": "date",
+  "发生额": "amount",
+  "交易金额": "amount",
+  "币种": "currency",
+  "摘要": "reference",
+  "对方户名": "reference",
+  "Transaction Date": "date",
+  "Amount": "amount",
+  "Currency": "currency",
+  "Description": "reference"
+}
