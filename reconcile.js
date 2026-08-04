@@ -10,9 +10,10 @@
 //   2. 解析银行流水（可选套用 mappings/bank.json 做表头映射）
 //   3. 按「金额 + ±3 天日期窗口」把每条平台记录和一条银行流水配对
 //      （同币种直接比金额；跨币种按 mappings/rates.json 静态汇率折算后比较）
-//   4. 差异分三类输出：平台少结 / 银行未到 / 汇率损耗超阈值
-//      —— 匹配策略刻意保守：找不到可信匹配就报「未匹配」，绝不模糊吞掉差异
-//   5. 写 report.csv，末尾附三类差异的汇总行
+//   4. 差异分四类输出：平台少结 / 银行未到 / 汇率损耗超阈值 / 来源不明入账
+//      （来源不明入账 = 银行流水里没有被任何平台记录认领的行——绝不能因为只遍历
+//      平台记录就把这类行漏掉，宁可报未匹配，绝不吞掉差异）
+//   5. 写 report.csv，末尾附四类差异的汇总行
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -203,6 +204,22 @@ function reconcileRecords(records, bankRows, rates, whitelistKeys) {
     });
   }
 
+  // 银行流水里没有被任何平台记录认领的行。上面的循环只遍历 records（平台记录），
+  // 所以永远不会主动看一眼「剩下哪些银行流水没被认领」——如果到这里不补一遍，
+  // 这些行就会被静默丢弃：来源不明的汇款、退款回冲、误入账都会凭空消失，
+  // 而这恰恰违反了本模板「宁可报未匹配，绝不吞掉差异」的第一原则。
+  for (const b of bankRows) {
+    if (b.consumed) continue;
+    results.push({
+      rec: null,
+      bank: b,
+      status: '来源不明入账',
+      note: `银行流水入账 ${b.amount.toFixed(2)} ${b.currency}（参考：${b.reference || '无摘要'}），在全部平台报表记录中找不到匹配的订单——可能是未知来源汇款、退款回冲，或误入账，需人工核实来源`,
+      countsInSummary: true,
+      shortfallAmount: 0,
+    });
+  }
+
   return results;
 }
 
@@ -231,41 +248,74 @@ function buildReport(results) {
 
   const rows = [header];
   for (const r of results) {
-    rows.push([
-      r.rec.platform,
-      r.rec.order_id,
-      r.rec.currency,
-      r.rec.gross.toFixed(2),
-      r.rec.fees.toFixed(2),
-      formatBreakdown(r.rec.fee_breakdown),
-      r.rec.net.toFixed(2),
-      r.rec.settled_at,
-      r.bank ? r.bank.date : '',
-      r.bank ? r.bank.amount.toFixed(2) : '',
-      r.bank ? r.bank.currency : '',
-      r.status,
-      r.note,
-    ]);
+    if (r.rec) {
+      rows.push([
+        r.rec.platform,
+        r.rec.order_id,
+        r.rec.currency,
+        r.rec.gross.toFixed(2),
+        r.rec.fees.toFixed(2),
+        formatBreakdown(r.rec.fee_breakdown),
+        r.rec.net.toFixed(2),
+        r.rec.settled_at,
+        r.bank ? r.bank.date : '',
+        r.bank ? r.bank.amount.toFixed(2) : '',
+        r.bank ? r.bank.currency : '',
+        r.status,
+        r.note,
+      ]);
+    } else {
+      // 来源不明入账：没有平台记录可对应，platform/order_id 等字段留空，
+      // 银行侧字段照实填，方便和有平台记录的行用同一张表统一浏览。
+      rows.push([
+        '',
+        '',
+        r.bank.currency,
+        '',
+        '',
+        '',
+        '',
+        '',
+        r.bank.date,
+        r.bank.amount.toFixed(2),
+        r.bank.currency,
+        r.status,
+        r.note,
+      ]);
+    }
   }
 
-  // 汇总：三类差异各一行，作为文件最后几行，供 `tail -5 report.csv` 校验
+  // 汇总：四类差异各一行，作为文件最后几行，供 `tail -5 report.csv` 校验
+  // （平台少结/银行未到/汇率损耗/来源不明入账，这个顺序不能变——前三类是既有契约，
+  // 新的一类追加在最后，保证 tail -5 依旧能看到前三类原有汇总行）
   const pad = () => header.slice(3).map(() => '');
 
   const under = results.filter((r) => r.countsInSummary && r.status === '平台少结');
   const missing = results.filter((r) => r.countsInSummary && r.status === '银行未到');
   const fxLoss = results.filter((r) => r.countsInSummary && r.status === '汇率损耗');
+  const unclaimed = results.filter((r) => r.countsInSummary && r.status === '来源不明入账');
 
   const underTotal = round2(under.reduce((s, r) => s + r.shortfallAmount, 0));
   const missingTotal = round2(missing.reduce((s, r) => s + r.rec.net, 0));
   const fxLossTotal = round2(fxLoss.reduce((s, r) => s + r.shortfallAmount, 0));
+  const unclaimedTotal = round2(unclaimed.reduce((s, r) => s + r.bank.amount, 0));
 
   rows.push(header.map(() => ''));
   rows.push(['汇总', '笔数', '金额合计（原始币种直接相加，跨币种汇总仅供参考）', ...pad()]);
   rows.push(['平台少结', String(under.length), underTotal.toFixed(2), ...pad()]);
   rows.push(['银行未到', String(missing.length), missingTotal.toFixed(2), ...pad()]);
   rows.push(['汇率损耗', String(fxLoss.length), fxLossTotal.toFixed(2), ...pad()]);
+  rows.push(['来源不明入账', String(unclaimed.length), unclaimedTotal.toFixed(2), ...pad()]);
 
-  return { rows, counts: { under: under.length, missing: missing.length, fxLoss: fxLoss.length } };
+  return {
+    rows,
+    counts: {
+      under: under.length,
+      missing: missing.length,
+      fxLoss: fxLoss.length,
+      unclaimed: unclaimed.length,
+    },
+  };
 }
 
 function main() {
@@ -316,8 +366,8 @@ function main() {
 
   console.log(
     `对账完成：共处理 ${records.length} 条平台记录，${bankRows.length} 条银行流水。` +
-      `差异 —— 平台少结: ${counts.under}，银行未到: ${counts.missing}，汇率损耗: ${counts.fxLoss}。` +
-      `报告已写入 ${args.out}`,
+      `差异 —— 平台少结: ${counts.under}，银行未到: ${counts.missing}，汇率损耗: ${counts.fxLoss}，` +
+      `来源不明入账: ${counts.unclaimed}。报告已写入 ${args.out}`,
   );
   process.exit(0);
 }
